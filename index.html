@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>夢幻白板</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&family=Noto+Sans+TC:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fffcf5;--ink:#222;--bar:#28352f;--btn:#3b4a43;--bt:#e8efe9;--on:#f0a83a;--py:#2f5e49;--tm:#e4572e;--tm2:#f0a030;--fs:96px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c201e;--ink:#f3efe4;--py:#8fd3b1;--bar:#0f1512;--btn:#26322d}}
+:root[data-theme="dark"]{--bg:#1c201e;--ink:#f3efe4;--py:#8fd3b1;--bar:#0f1512;--btn:#26322d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+[hidden]{display:none!important}
+#bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px;background:var(--bar)}
+#bar button,.pop button{font:700 13px/1 inherit;font-family:inherit;border:0;border-radius:8px;padding:9px 12px;background:var(--btn);color:var(--bt);cursor:pointer;white-space:nowrap}
+#bar button.on{background:var(--on);color:#2a1d00}
+.sep{width:1px;height:24px;background:#ffffff33;margin:0 4px}
+#paper{padding:28px 40px 120px;min-height:calc(100% - 200px);cursor:text;font-size:var(--fs)}
+.line{display:flex;flex-wrap:wrap;align-items:flex-start;min-height:1.9em}
+.cell{display:flex;flex-direction:column;align-items:center;padding:0 .01em;border-radius:.06em}
+.cell.sel{background:#5b9dff44}
+.tm{height:.2em;display:flex;align-items:flex-end;justify-content:center;font-style:normal}
+.tm b{display:block;background:var(--tm);height:.04em;border-radius:.02em;margin-bottom:.02em}
+.t1{width:.3em}
+.tm b.t3,.tm b.th{width:.24em;height:.12em;border-radius:0;clip-path:polygon(0 0,20% 0,50% 68%,80% 0,100% 0,58% 100%,42% 100%)}
+.t2{width:.26em;transform:rotate(-35deg);background:var(--tm2)!important}
+.t4{width:.26em;transform:rotate(35deg)}
+.t5{width:.06em;height:.06em!important;border-radius:50%!important}
+.g{line-height:1.05;font-weight:700;min-width:.98em;text-align:center}
+.g.hl{background:#ffe14d;color:#222}
+.g.u{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.08em}
+.g.s{text-decoration:line-through;text-decoration-thickness:.05em}
+.g.u.s{text-decoration:underline line-through}
+.lb{font:700 .17em/1.3 Nunito,system-ui,sans-serif;color:var(--py);min-height:1.3em;white-space:nowrap}
+.lb.z{font-family:"Noto Sans TC",sans-serif;margin-top:-.2em}
+.nomark .tm b{visibility:hidden}
+.comp .g{border-bottom:.03em dotted var(--ink)}
+.caret{width:3px;height:1.05em;margin:.2em 1px 0;background:var(--ink);animation:bl 1s steps(2) infinite}
+.caret.h{visibility:hidden}
+@keyframes bl{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+.pop{position:fixed;z-index:20;display:flex;flex-wrap:wrap;gap:6px;max-width:80vw;padding:6px;border-radius:10px;background:var(--bar);box-shadow:0 6px 20px #0006}
+.pop button small{opacity:.7;margin-left:4px}
+.pop i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+#in{position:fixed;left:0;top:0;width:2px;height:20px;opacity:0;border:0;padding:0;font-size:16px;resize:none;pointer-events:none;caret-color:transparent}
+#hint{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom,0px));text-align:center;font-size:13px;color:var(--py);opacity:.7;pointer-events:none}
+@media print{:root:root:root{--ink:#222;--py:#2f5e49;--bg:#fff}html,body{height:auto}#bar,.pop,#in,#hint,.caret{display:none!important}body{background:#fff;color:#222}#paper{padding:0;min-height:0}.cell.sel{background:none}.line{break-inside:avoid}}
+</style></head><body>
+<div id="bar">
+ <button id="clr">🗑 清空</button><button id="conv">簡⇄繁</button><span class="sep"></span>
+ <button id="py"></button><button id="zy"></button><button id="mk"></button><span class="sep"></span>
+ <button id="fs"></button><button id="col"></button><button id="bhl">反黃底</button><button id="bu">底線</button><button id="bs">刪除線</button><span class="sep"></span>
+ <button id="pdf">匯出 PDF</button>
+</div>
+<div id="paper"></div>
+<div id="pal" class="pop" hidden></div><div id="pop" class="pop" hidden></div>
+<textarea id="in" spellcheck="false" autocapitalize="off" autocorrect="off" aria-label="輸入文字"></textarea>
+<div id="hint">雙擊或拖曳選字，可改讀音、上色</div>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+<script>
+const $=s=>document.querySelector(s),P=window.pinyinPro;
+const paper=$('#paper'),inp=$('#in'),pop=$('#pop'),pal=$('#pal');
+const COLORS=[['黑',null],['紅','#d62828'],['橙','#e8720c'],['綠','#1f8a4c'],['藍','#1d5fd1'],['紫','#8a3ffc']];
+const FS=[['中',56],['大',76],['特大',96]];
+const set={py:1,zy:0,mk:1,fs:2},cur={color:0,hl:0,u:0,s:0};
+let T=[],anchor=0,caret=0,comp=null,drag=false,lastC=-1,lastT=0;
+const mkc=c=>({c,py:'',color:cur.color,hl:cur.hl,u:cur.u,s:cur.s,cu:0});
+const isZh=c=>/[\u3400-\u9fff]/.test(c);
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const rng=()=>[Math.min(anchor,caret),Math.max(anchor,caret)];
+/* ---- pinyin / zhuyin ---- */
+const TN={};'āēīōūǖ'.split('').forEach(c=>TN[c]=1);'áéíóúǘ'.split('').forEach(c=>TN[c]=2);'ǎěǐǒǔǚ'.split('').forEach(c=>TN[c]=3);'àèìòùǜ'.split('').forEach(c=>TN[c]=4);
+const tone=p=>{for(const c of p)if(TN[c])return TN[c];return 5};
+const IN={b:'ㄅ',p:'ㄆ',m:'ㄇ',f:'ㄈ',d:'ㄉ',t:'ㄊ',n:'ㄋ',l:'ㄌ',g:'ㄍ',k:'ㄎ',h:'ㄏ',j:'ㄐ',q:'ㄑ',x:'ㄒ',zh:'ㄓ',ch:'ㄔ',sh:'ㄕ',r:'ㄖ',z:'ㄗ',c:'ㄘ',s:'ㄙ'};
+const FN={a:'ㄚ',o:'ㄛ',e:'ㄜ',ai:'ㄞ',ei:'ㄟ',ao:'ㄠ',ou:'ㄡ',an:'ㄢ',en:'ㄣ',ang:'ㄤ',eng:'ㄥ',er:'ㄦ',i:'ㄧ',ia:'ㄧㄚ',io:'ㄧㄛ',ie:'ㄧㄝ',iao:'ㄧㄠ',iu:'ㄧㄡ',iou:'ㄧㄡ',ian:'ㄧㄢ',in:'ㄧㄣ',iang:'ㄧㄤ',ing:'ㄧㄥ',u:'ㄨ',ua:'ㄨㄚ',uo:'ㄨㄛ',uai:'ㄨㄞ',ui:'ㄨㄟ',uei:'ㄨㄟ',uan:'ㄨㄢ',un:'ㄨㄣ',uen:'ㄨㄣ',uang:'ㄨㄤ',ueng:'ㄨㄥ',ong:'ㄨㄥ',v:'ㄩ',ve:'ㄩㄝ',ue:'ㄩㄝ',van:'ㄩㄢ',vn:'ㄩㄣ',iong:'ㄩㄥ'};
+function zy(p){
+ const s=p.replace(/[ǖǘǚǜü]/g,'v').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(!/^[a-z]+$/.test(s))return '';
+ let ini='',fin=s;
+ if(s[0]=='y')fin=s.startsWith('yu')?'v'+s.slice(2):s.startsWith('yi')?s.slice(1):'i'+s.slice(1);
+ else if(s[0]=='w')fin=s=='wu'?'u':'u'+s.slice(1);
+ else{const m=s.match(/^(zh|ch|sh|[bpmfdtnlgkhjqxrzcs])/);
+  if(m){ini=m[1];fin=s.slice(ini.length);
+   if('jqx'.includes(ini)&&fin[0]=='u')fin='v'+fin.slice(1);
+   if(/^(zh|ch|sh|r|z|c|s)$/.test(ini)&&fin=='i')fin=''}}
+ const f=fin===''?'':FN[fin];if(f===undefined)return '';
+ const b=(IN[ini]||'')+f,t=tone(p);
+ return t==5?'˙'+b:b+['','','ˊ','ˇ','ˋ'][t];
+}
+const NUM='一二三四五六七八九十零〇',ORD='一第統唯惟之同專單劃歸合初';
+function calc(){
+ let i=0;
+ while(i<T.length){
+  if(!isZh(T[i].c)){T[i].py='';i++;continue}
+  let j=i;while(j<T.length&&isZh(T[j].c))j++;
+  let a=[];try{a=P.pinyin(T.slice(i,j).map(t=>t.c).join(''),{type:'array'})}catch(e){}
+  for(let k=i;k<j;k++)if(!T[k].cu)T[k].py=a[k-i]||'';
+  i=j;
+ }
+ for(let k=T.length-1;k>=0;k--){
+  const t=T[k],n=T[k+1];if(t.cu)continue;
+  if(t.c=='不')t.py=n&&n.py&&tone(n.py)==4?'bú':'bù';
+  else if((t.c=='嗎'||t.c=='吗')&&!(n&&n.c=='啡'))t.py='mā';
+  else if(t.c=='一'){
+   if(!n||!n.py||NUM.includes(n.c)||(T[k-1]&&ORD.includes(T[k-1].c)))t.py='yī';
+   else t.py=tone(n.py)>=4?'yí':'yì';
+  }
+ }
+}
+function mk(i){
+ const t=T[i];if(!t.py)return '';const k=tone(t.py);if(k!=3)return k;
+ const is3=j=>T[j]&&T[j].py&&tone(T[j].py)==3;
+ let s=i,e=i;while(is3(s-1))s--;while(is3(e+1))e++;
+ let r=e-s+1,pos=i-s,off=0;
+ for(;;){
+  const g=r==3?3:r>=2?2:1;
+  if(pos<off+g){const x=pos-off;return(g==2&&x==0)||(g==3&&x==1)?2:3}
+  off+=g;r-=g;
+ }
+}
+/* ---- render ---- */
+function cell(t,i,lo,hi){
+ const k=mk(i),st=t.color?`color:${COLORS[t.color][1]}`:'';
+ return `<span class="cell${i>=lo&&i<hi?' sel':''}" data-i="${i}"><i class="tm">${k?`<b class="t${k}"></b>`:''}</i><span class="g${t.hl?' hl':''}${t.u?' u':''}${t.s?' s':''}" style="${st}">${esc(t.c)}</span>${set.py?`<span class="lb">${t.py}</span>`:''}${set.zy?`<span class="lb z">${t.py?zy(t.py):''}</span>`:''}</span>`;
+}
+function render(){
+ const [lo,hi]=rng();let h='',ln='';
+ const flush=e=>{h+=`<div class="line" data-end="${e}">${ln}</div>`;ln=''};
+ for(let i=0;i<=T.length;i++){
+  if(i==caret)ln+=`<span class="caret${lo<hi?' h':''}"></span>`+(comp?`<span class="cell comp"><i class="tm"></i><span class="g">${esc(comp)}</span></span>`:'');
+  if(i==T.length){flush(i);break}
+  if(T[i].c=='\n')flush(i);else ln+=cell(T[i],i,lo,hi);
+ }
+ paper.innerHTML=h;
+ const c=paper.querySelector('.caret');
+ if(c){const r=c.getBoundingClientRect();inp.style.left=r.left+'px';inp.style.top=r.top+'px';c.scrollIntoView({block:'nearest'})}
+ ui();readings();save();
+}
+const refresh=()=>{calc();render()};
+function ui(){
+ const [lo,hi]=rng(),sel=lo<hi;
+ const on=(id,v)=>$(id).classList.toggle('on',!!v);
+ $('#py').textContent='拼音：'+(set.py?'開':'關');$('#zy').textContent='注音：'+(set.zy?'開':'關');$('#mk').textContent='朗讀記號：'+(set.mk?'開':'關');
+ on('#py',set.py);on('#zy',set.zy);on('#mk',set.mk);
+ $('#fs').textContent='字級：'+FS[set.fs][0];
+ $('#col').textContent='顏色：'+COLORS[sel?T[lo].color:cur.color][0];
+ [['#bhl','hl'],['#bu','u'],['#bs','s']].forEach(([id,k])=>on(id,sel?T.slice(lo,hi).every(t=>t[k]):cur[k]));
+}
+function readings(){
+ pop.hidden=true;const [lo,hi]=rng();
+ if(hi-lo!==1||comp!==null||!T[lo]||!isZh(T[lo].c))return;
+ let r=[];try{r=[].concat(...[].concat(P.polyphonic(T[lo].c,{type:'array'})))}catch(e){}
+ r=[...new Set(r)];if(r.length<2)return;
+ pop.innerHTML=r.map(p=>`<button data-p="${p}"${p==T[lo].py?' class="on"':''}>${p}<small>${zy(p)}</small></button>`).join('');
+ const b=paper.querySelector('.cell.sel');if(!b)return;
+ const q=b.getBoundingClientRect();
+ pop.style.left=Math.max(8,Math.min(q.left,innerWidth-200))+'px';pop.style.top=(q.bottom+6)+'px';pop.hidden=false;
+}
+pop.onmousedown=pal.onmousedown=e=>e.preventDefault();
+pop.onclick=e=>{const b=e.target.closest('button');if(!b)return;const [lo]=rng();T[lo].py=b.dataset.p;T[lo].cu=1;render()};
+/* ---- editing ---- */
+function delSel(q){const [lo,hi]=rng();if(lo<hi){T.splice(lo,hi-lo);caret=anchor=lo}if(!q)refresh()}
+function ins(s){delSel(true);const a=Array.from(s.replace(/\r\n?/g,'\n')).map(mkc);T.splice(caret,0,...a);caret=anchor=caret+a.length;refresh()}
+inp.addEventListener('compositionstart',()=>{delSel(true);comp=''});
+inp.addEventListener('compositionupdate',e=>{comp=e.data;render()});
+inp.addEventListener('compositionend',e=>{comp=null;inp.value='';ins(e.data)});
+inp.addEventListener('input',e=>{if(e.isComposing||comp!==null)return;const v=inp.value;inp.value='';if(v)ins(v)});
+inp.addEventListener('keydown',e=>{
+ if(e.isComposing||comp!==null)return;
+ const k=e.key,n=T.length,[lo,hi]=rng(),sel=lo<hi;
+ const mv=i=>{caret=Math.max(0,Math.min(n,i));if(!e.shiftKey)anchor=caret;render()};
+ const c=paper.querySelector('.caret');
+ if(e.ctrlKey||e.metaKey){
+  if(k=='a'){anchor=0;caret=n;render();e.preventDefault()}
+  else if((k=='c'||k=='x')&&sel){inp.value=T.slice(lo,hi).map(t=>t.c).join('');inp.select();if(k=='x')setTimeout(()=>{inp.value='';delSel()})}
+  return;
+ }
+ if(k=='Backspace'){sel?delSel():caret>0&&(T.splice(--caret,1),anchor=caret,refresh())}
+ else if(k=='Delete'){sel?delSel():caret<n&&(T.splice(caret,1),refresh())}
+ else if(k=='Enter')ins('\n');
+ else if(k=='ArrowLeft'){sel&&!e.shiftKey?(caret=anchor=lo,render()):mv(caret-1)}
+ else if(k=='ArrowRight'){sel&&!e.shiftKey?(caret=anchor=hi,render()):mv(caret+1)}
+ else if((k=='ArrowUp'||k=='ArrowDown')&&c){
+  const r=c.getBoundingClientRect(),h=c.closest('.line').offsetHeight;
+  const el=document.elementFromPoint(r.left,r.top+r.height/2+(k=='ArrowUp'?-h:h));
+  if(el)mv(idxAt(el,r.left));
+ }
+ else if(k=='Home'){let j=caret;while(j>0&&T[j-1].c!='\n')j--;mv(j)}
+ else if(k=='End'&&c)mv(+c.closest('.line').dataset.end);
+ else return;
+ e.preventDefault();
+});
+/* ---- pointer selection ---- */
+function idxAt(t,x){
+ const c=t.closest&&t.closest('.cell:not(.comp)');
+ if(c){const r=c.getBoundingClientRect(),i=+c.dataset.i;return x<r.left+r.width/2?i:i+1}
+ const l=t.closest&&t.closest('.line');return l?+l.dataset.end:T.length;
+}
+paper.addEventListener('pointerdown',e=>{
+ if(e.button)return;e.preventDefault();inp.focus({preventScroll:true});
+ const c=e.target.closest('.cell:not(.comp)'),ci=c?+c.dataset.i:-1;
+ if(ci>=0&&ci==lastC&&e.timeStamp-lastT<400){anchor=ci;caret=ci+1;lastC=-1;render();return}
+ lastC=ci;lastT=e.timeStamp;
+ caret=idxAt(e.target,e.clientX);if(!e.shiftKey)anchor=caret;drag=true;render();
+});
+document.addEventListener('pointermove',e=>{
+ if(!drag)return;const el=document.elementFromPoint(e.clientX,e.clientY);if(!el)return;
+ const i=idxAt(el,e.clientX);if(i!==caret){caret=i;render()}
+});
+document.addEventListener('pointerup',()=>drag=false);
+document.addEventListener('click',e=>{if(!e.target.closest('#col,#pal'))pal.hidden=true});
+/* ---- toolbar ---- */
+$('#bar').onmousedown=e=>e.preventDefault();
+const foc=()=>inp.focus({preventScroll:true});
+$('#clr').onclick=()=>{T=[];caret=anchor=0;refresh();foc()};
+$('#py').onclick=()=>{set.py^=1;render();foc()};
+$('#zy').onclick=()=>{set.zy^=1;render();foc()};
+$('#mk').onclick=()=>{set.mk^=1;paper.classList.toggle('nomark',!set.mk);ui();foc()};
+$('#fs').onclick=()=>{set.fs=(set.fs+1)%3;document.documentElement.style.setProperty('--fs',FS[set.fs][1]+'px');render();foc()};
+function fmt(k){const [lo,hi]=rng();
+ if(lo<hi){const v=!T.slice(lo,hi).every(t=>t[k]);T.slice(lo,hi).forEach(t=>t[k]=v?1:0)}else cur[k]^=1;
+ render();foc()}
+$('#bhl').onclick=()=>fmt('hl');$('#bu').onclick=()=>fmt('u');$('#bs').onclick=()=>fmt('s');
+pal.innerHTML=COLORS.map((c,i)=>`<button data-c="${i}"><i style="background:${c[1]||'var(--ink)'}"></i>${c[0]}</button>`).join('');
+$('#col').onclick=e=>{e.stopPropagation();const r=$('#col').getBoundingClientRect();pal.style.left=r.left+'px';pal.style.top=(r.bottom+6)+'px';pal.hidden=!pal.hidden};
+pal.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=+b.dataset.c,[lo,hi]=rng();
+ if(lo<hi)T.slice(lo,hi).forEach(t=>t.color=v);else cur.color=v;pal.hidden=true;render();foc()};
+const PAIRS='这這们們个個来來时時说說对對样樣点點开開关關问問题題过過还還发發经經动動学學会會应應现現体體电電两兩机機长長东東门門马馬鸟鳥鱼魚车車书書买買卖賣认認让讓从從为為无無国國网網业業产產气氣爱愛红紅绿綠蓝藍灯燈听聽写寫读讀语語话話请請谢謝谁誰边邊显顯选選颜顏级級条條终終结結给給线線练練习習图圖见見觉覺观觀规規视視变變处處务務办辦总總组組织織较較论論议議设設计計记記试試验驗实實梦夢么麼后後里裡当當种種';
+const S2T={},T2S={};for(let i=0;i<PAIRS.length;i+=2){S2T[PAIRS[i]]=PAIRS[i+1];T2S[PAIRS[i+1]]=PAIRS[i]}
+let cS,cT;const cache={};
+function cv(d,ch){
+ const M=d=='s2t'?S2T:T2S;if(M[ch])return M[ch];
+ if(!window.OpenCC||!isZh(ch))return ch;
+ const k=d+ch;
+ if(!(k in cache))try{cache[k]=d=='s2t'?(cS=cS||OpenCC.Converter({from:'cn',to:'tw'}))(ch):(cT=cT||OpenCC.Converter({from:'tw',to:'cn'}))(ch)}catch(e){cache[k]=ch}
+ return cache[k];
+}
+$('#conv').onclick=()=>{
+ const s=T.filter(t=>cv('s2t',t.c)!=t.c).length,u=T.filter(t=>cv('t2s',t.c)!=t.c).length,d=s>=u?'s2t':'t2s';
+ T.forEach(t=>t.c=cv(d,t.c));refresh();foc();
+};
+$('#pdf').onclick=()=>{
+ const h=$('#hint'),o=h.textContent;
+ h.textContent='若沒有跳出列印視窗，請按 Ctrl/⌘ + P，目的地選「另存為 PDF」';h.style.opacity=1;
+ setTimeout(()=>{h.textContent=o;h.style.opacity=''},7000);
+ try{window.print()}catch(e){}
+};
+/* ---- autosave ---- */
+const KEY='dream-whiteboard-v1';let st;
+function save(){clearTimeout(st);st=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify({T,set}))}catch(e){}},300)}
+/* ---- start ---- */
+try{const d=JSON.parse(localStorage.getItem(KEY)||'null');
+ if(d&&Array.isArray(d.T)){T=d.T;Object.assign(set,d.set||{})}}catch(e){}
+let seen=false;try{seen=!!localStorage.getItem(KEY)}catch(e){}
+if(!T.length&&!seen)T=Array.from('這是我的夢幻白板\n我可以一邊打字一邊顯示\n不行不要').map(mkc);
+document.documentElement.style.setProperty('--fs',FS[set.fs][1]+'px');paper.classList.toggle('nomark',!set.mk);
+caret=anchor=T.length;refresh();foc();
+</script></body></html>
